@@ -50,12 +50,7 @@ class MyPlayer:
         best_score = -1000
 
         if self.go.game_end(piece_type) or max_depth == 0:
-            if self.go.judge_winner() == self.piece_type:
-                return 1
-            elif self.go.judge_winner() == 3 - self.piece_type:
-                return -1
-            else:
-                return 0
+            return self.evaluate_board()
 
         for placement in placements:
             prev_board = deepcopy(self.go.previous_board)
@@ -79,12 +74,7 @@ class MyPlayer:
         best_score = 1000
 
         if self.go.game_end(piece_type) or max_depth == 0:
-            if self.go.judge_winner() == self.piece_type:
-                return 1
-            elif self.go.judge_winner() == 3 - self.piece_type:
-                return -1
-            else:
-                return 0
+            return self.evaluate_board()
 
         for placement in placements:
             prev_board = deepcopy(self.go.previous_board)
@@ -102,6 +92,13 @@ class MyPlayer:
                 break
         
         return best_score
+    
+    def evaluate_board(self):
+        if self.go.judge_winner() == self.piece_type:
+            return 1
+        elif self.go.judge_winner() == 3 - self.piece_type:
+            return -1
+        return 0
 
 if __name__ == "__main__":
     N = 5
@@ -109,9 +106,25 @@ if __name__ == "__main__":
     go = GO(N)
     go.set_board(piece_type, previous_board, board)
     player = MyPlayer(go, piece_type)
-    max_depth = 3
+    max_depth = 5
     alpha = -1000
     beta = 1000
-    action = player.minimax(max_depth, alpha, beta)
-    rand_action = random.choice(action)
-    writeOutput(rand_action)
+
+    pieces = 0
+    for i in range(5):
+        for j in range(5):
+            if board[i][j] != 0:
+                pieces += 1
+    mid_empty = False
+    if board[2][2] == 0:
+        mid_empty = True
+
+    best_action = "PASS"
+    if (pieces == 0 and piece_type == 1) or (pieces == 1 and piece_type == 2 and mid_empty):
+        best_action = (2, 2)
+    else:
+        action = player.minimax(max_depth, alpha, beta)
+        if(action):
+            best_action = random.choice(action)
+
+    writeOutput(best_action)
