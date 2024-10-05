@@ -60,6 +60,7 @@ class MyPlayer:
         copy_go = self.go.copy_board()
         best_score = -1000
 
+<<<<<<< HEAD
         for i in range(5):
             for j in range(5):
                 self.go.previous_board = deepcopy(self.go.board)
@@ -67,6 +68,15 @@ class MyPlayer:
                     self.go = copy_go.copy_board()
                     continue
                 self.go.died_pieces = self.go.remove_died_pieces(3 - piece_type)
+=======
+        if self.go.game_end(piece_type) or max_depth == 0:
+            if self.go.judge_winner() == self.piece_type:
+                return 1
+            elif self.go.judge_winner() == 3 - self.piece_type:
+                return -1
+            else:
+                return 0
+>>>>>>> parent of 78687f2 (add first move)
 
                 self.go.visualize_board()
 
@@ -83,6 +93,7 @@ class MyPlayer:
 
     def minimizing_player(self, max_depth, alpha, beta, piece_type):
         if self.go.game_end(piece_type) or max_depth == 0:
+<<<<<<< HEAD
             print("return")
             return self.evaluate_board()
         
@@ -96,6 +107,14 @@ class MyPlayer:
                     self.go = copy_go.copy_board()
                     continue
                 self.go.died_pieces = self.go.remove_died_pieces(3 - piece_type)
+=======
+            if self.go.judge_winner() == self.piece_type:
+                return 1
+            elif self.go.judge_winner() == 3 - self.piece_type:
+                return -1
+            else:
+                return 0
+>>>>>>> parent of 78687f2 (add first move)
 
                 self.go.visualize_board()
 
@@ -109,6 +128,7 @@ class MyPlayer:
                     break
         
         return best_score
+<<<<<<< HEAD
     
     def evaluate_board(self):
         if self.go.judge_winner() == self.my_piece_type:
@@ -116,11 +136,14 @@ class MyPlayer:
         elif self.go.judge_winner() == 3 - self.my_piece_type:
             return -1
         return 0
+=======
+>>>>>>> parent of 78687f2 (add first move)
 
 if __name__ == "__main__":
     N = 5
     my_piece_type, previous_board, board = readInput(N)
     go = GO(N)
+<<<<<<< HEAD
     go.set_board(my_piece_type, previous_board, board)
     player = MyPlayer(go, my_piece_type)
     max_depth = 5
@@ -145,3 +168,13 @@ if __name__ == "__main__":
             best_action = random.choice(action)
 
     writeOutput(best_action)
+=======
+    go.set_board(piece_type, previous_board, board)
+    player = MyPlayer(go, piece_type)
+    max_depth = 3
+    alpha = -1000
+    beta = 1000
+    action = player.minimax(max_depth, alpha, beta)
+    rand_action = random.choice(action)
+    writeOutput(rand_action)
+>>>>>>> parent of 78687f2 (add first move)
