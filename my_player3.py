@@ -16,7 +16,7 @@ class MyPlayer:
 
         for i in range(N):
             for j in range(N):
-                if self.go.valid_place_check(i, j, piece_type, test_check=True):
+                if self.go.valid_place_check(i, j, piece_type):
                     possible_placements.append((i, j))
 
         return possible_placements
@@ -26,27 +26,29 @@ class MyPlayer:
         best_score = -1000
         
         copy_go = self.go.copy_board()
-        placements = self.get_valid_placements(self.my_piece_type)
 
         self.go.visualize_board()
 
-        for placement in placements:
-            self.go.previous_board = deepcopy(self.go.board)
-            self.go.place_chess(placement[0], placement[1], self.my_piece_type)
-            self.go.died_pieces = self.go.remove_died_pieces(3 - self.my_piece_type)
+        for i in range(5):
+            for j in range(5):
+                self.go.previous_board = deepcopy(self.go.board)
+                if not self.go.place_chess(i, j, self.my_piece_type):
+                    self.go = copy_go.copy_board()
+                    continue
+                self.go.died_pieces = self.go.remove_died_pieces(3 - self.my_piece_type)
 
-            self.go.visualize_board()
+                self.go.visualize_board()
 
-            score = self.minimizing_player(max_depth, alpha, beta, 3 - self.my_piece_type)
+                score = self.minimizing_player(max_depth, alpha, beta, 3 - self.my_piece_type)
 
-            if score > best_score:
-                best_score = score
-                alpha = best_score
-                best_moves = [placement]
-            elif score == best_score:
-                best_moves.append(placement)
+                if score > best_score:
+                    best_score = score
+                    alpha = best_score
+                    best_moves = [(i, j)]
+                elif score == best_score:
+                    best_moves.append((i, j))
 
-            self.go = copy_go.copy_board()
+                self.go = copy_go.copy_board()
         
         return best_moves
 
@@ -56,24 +58,26 @@ class MyPlayer:
             return self.evaluate_board()
         
         copy_go = self.go.copy_board()
-        placements = self.get_valid_placements(piece_type)
         best_score = -1000
 
-        for placement in placements:
-            self.go.previous_board = deepcopy(self.go.board)
-            self.go.place_chess(placement[0], placement[1], piece_type)
-            self.go.died_pieces = self.go.remove_died_pieces(3 - piece_type)
+        for i in range(5):
+            for j in range(5):
+                self.go.previous_board = deepcopy(self.go.board)
+                if not self.go.place_chess(i, j, piece_type):
+                    self.go = copy_go.copy_board()
+                    continue
+                self.go.died_pieces = self.go.remove_died_pieces(3 - piece_type)
 
-            self.go.visualize_board()
+                self.go.visualize_board()
 
-            curr_score = self.minimizing_player(max_depth - 1, alpha, beta, 3 - piece_type)
-            alpha = max(alpha, curr_score)
-            best_score = max(best_score, curr_score)
-            
-            self.go = copy_go.copy_board()
+                curr_score = self.minimizing_player(max_depth - 1, alpha, beta, 3 - piece_type)
+                alpha = max(alpha, curr_score)
+                best_score = max(best_score, curr_score)
+                
+                self.go = copy_go.copy_board()
 
-            if beta <= alpha:
-                break
+                if beta <= alpha:
+                    break
         
         return best_score
 
@@ -83,24 +87,26 @@ class MyPlayer:
             return self.evaluate_board()
         
         copy_go = self.go.copy_board()
-        placements = self.get_valid_placements(piece_type)
         best_score = 1000
         
-        for placement in placements:
-            self.go.previous_board = deepcopy(self.go.board)
-            self.go.place_chess(placement[0], placement[1], piece_type)
-            self.go.died_pieces = self.go.remove_died_pieces(3 - piece_type)
+        for i in range(5):
+            for j in range(5):
+                self.go.previous_board = deepcopy(self.go.board)
+                if not self.go.place_chess(i, j, piece_type):
+                    self.go = copy_go.copy_board()
+                    continue
+                self.go.died_pieces = self.go.remove_died_pieces(3 - piece_type)
 
-            self.go.visualize_board()
+                self.go.visualize_board()
 
-            curr_score = self.maximizing_player(max_depth - 1, alpha, beta, 3 - piece_type)
-            beta = min(beta, curr_score)
-            best_score = min(best_score, curr_score)
-            
-            self.go = copy_go.copy_board()
+                curr_score = self.maximizing_player(max_depth - 1, alpha, beta, 3 - piece_type)
+                beta = min(beta, curr_score)
+                best_score = min(best_score, curr_score)
+                
+                self.go = copy_go.copy_board()
 
-            if beta <= alpha:
-                break
+                if beta <= alpha:
+                    break
         
         return best_score
     
