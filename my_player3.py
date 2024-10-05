@@ -3,80 +3,115 @@ import sys
 from read import readInput
 from write import writeOutput
 from copy import deepcopy
-
 from host import GO
 
-class MyPlayer():
-    def get_valid_placements(go, piece_type):
-        N = go.size
+class MyPlayer:
+    def __init__(self, go, piece_type):
+        self.go = go
+        self.piece_type = piece_type
+
+    def get_valid_placements(self):
+        N = self.go.size
         possible_placements = []
 
         for i in range(N):
             for j in range(N):
-                if go.valid_place_check(i, j, piece_type, test_check = True):
-                    possible_placements.append((i,j))
+                if self.go.valid_place_check(i, j, self.piece_type, test_check=True):
+                    possible_placements.append((i, j))
 
         return possible_placements
     
-    def minimax(self, go, piece_type, max_depth, alpha, beta):
-        placements = self.get_valid_placements(go, piece_type)
-        best_moves = ()
-        best_score = 0
+    def minimax(self, max_depth, alpha, beta):
+        placements = self.get_valid_placements()
+        best_moves = []
+        best_score = -1000
 
         for placement in placements:
-            prev_board = deepcopy(go.previous_board)
-            go.previous_board = deepcopy(go.board)
-            go.place_chess(placement[0], placement[1], piece_type)
-            score = self.maximizing_player(go, max_depth, alpha, beta, 3 - piece_type)
+            prev_board = deepcopy(self.go.previous_board)
+            self.go.previous_board = deepcopy(self.go.board)
+            self.go.place_chess(placement[0], placement[1], self.piece_type)
 
-            if score > best_score or not best_moves:
+            score = self.minimizing_player(max_depth, alpha, beta, self.piece_type)
+
+            if score > best_score:
                 best_score = score
                 alpha = best_score
                 best_moves = [placement]
             elif score == best_score:
                 best_moves.append(placement)
 
-            go.remove_certain_pieces(placement)
-            go.previous_board = prev_board
+            self.go.remove_certain_pieces([placement])
+            self.go.previous_board = prev_board
         
         return best_moves
 
-    def maximizing_player(go, max_depth, alpha, beta, piece_type):
-        best = heuristic(curr_state, next_player)
-        if max_depth == 0:
-            return best
+    def maximizing_player(self, max_depth, alpha, beta, piece_type):
+        placements = self.get_valid_placements()
+        best_score = -1000
 
-        curr_state_copy = copy.deepcopy(curr_state)
+        if self.go.game_end(piece_type) or max_depth == 0:
+            if self.go.judge_winner() == self.piece_type:
+                return 1
+            elif self.go.judge_winner() == 3 - self.piece_type:
+                return -1
+            else:
+                return 0
 
-        for move in find_valid_moves(curr_state, prev_state, next_player):
-            # update the next board state
-            next_state = make_move(curr_state, move, next_player)
-            # get the score from the minimizing player
-            curr_score = -1 * min_play(next_state, curr_state_copy, max_depth-1, alpha, beta, 3-next_player)
+        for placement in placements:
+            prev_board = deepcopy(self.go.previous_board)
+            self.go.previous_board = deepcopy(self.go.board)
+            self.go.place_chess(placement[0], placement[1], piece_type)
 
-            # check if we have to update best
-            if curr_score > best:
-                best = curr_score
+            curr_score = self.minimizing_player(max_depth - 1, alpha, beta, 3 - piece_type)
+            alpha = max(alpha, curr_score)
+            best_score = max(best_score, curr_score)
             
-            # update opponent's score from move
-            opponent = -1 * best
+            self.go.remove_certain_pieces([placement])
+            self.go.previous_board = prev_board
 
-            # check if prune and/or update alpha value
-            if opponent < beta:
-                return best
-            if best > alpha:
-                alpha = best
+            if beta <= alpha:
+                break
         
-        return best
-    
+        return best_score
+
+    def minimizing_player(self, max_depth, alpha, beta, piece_type):
+        placements = self.get_valid_placements()
+        best_score = 1000
+
+        if self.go.game_end(piece_type) or max_depth == 0:
+            if self.go.judge_winner() == self.piece_type:
+                return 1
+            elif self.go.judge_winner() == 3 - self.piece_type:
+                return -1
+            else:
+                return 0
+
+        for placement in placements:
+            prev_board = deepcopy(self.go.previous_board)
+            self.go.previous_board = deepcopy(self.go.board)
+            self.go.place_chess(placement[0], placement[1], piece_type)
+
+            curr_score = self.maximizing_player(max_depth - 1, alpha, beta, self.piece_type)
+            beta = min(beta, curr_score)
+            best_score = min(best_score, curr_score)
+            
+            self.go.remove_certain_pieces([placement])
+            self.go.previous_board = prev_board
+
+            if beta <= alpha:
+                break
+        
+        return best_score
+
 if __name__ == "__main__":
     N = 5
     piece_type, previous_board, board = readInput(N)
     go = GO(N)
     go.set_board(piece_type, previous_board, board)
-    player = MyPlayer()
-    max_depth = 2
-    alpha = -1000000000
-    beta = 1000000000
-    action = player.minimax(go, piece_type, max_depth, alpha, beta)
-    writeOutput(action)
+    player = MyPlayer(go, piece_type)
+    max_depth = 3
+    alpha = -1000
+    beta = 1000
+    action = player.minimax(max_depth, alpha, beta)
+    rand_action = random.choice(action)
+    writeOutput(rand_action)
