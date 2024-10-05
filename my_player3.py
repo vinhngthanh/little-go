@@ -6,11 +6,11 @@ from copy import deepcopy
 from host import GO
 
 class MyPlayer:
-    def __init__(self, go, my_piece_type):
+    def __init__(self, go, piece_type):
         self.go = go
-        self.my_piece_type = my_piece_type
+        self.piece_type = piece_type
 
-    def get_valid_placements(self, piece_type):
+    def get_valid_placements(self):
         N = self.go.size
         possible_placements = []
 
@@ -22,6 +22,7 @@ class MyPlayer:
         return possible_placements
     
     def minimax(self, max_depth, alpha, beta):
+        placements = self.get_valid_placements()
         best_moves = []
         best_score = -1000
         
@@ -29,6 +30,10 @@ class MyPlayer:
 
         self.go.visualize_board()
 
+        for placement in placements:
+            prev_board = deepcopy(self.go.previous_board)
+            self.go.previous_board = deepcopy(self.go.board)
+            self.go.place_chess(placement[0], placement[1], self.piece_type)
         for i in range(5):
             for j in range(5):
                 self.go.previous_board = deepcopy(self.go.board)
@@ -53,8 +58,10 @@ class MyPlayer:
         return best_moves
 
     def maximizing_player(self, max_depth, alpha, beta, piece_type):
+        placements = self.get_valid_placements()
+        best_score = -1000
+
         if self.go.game_end(piece_type) or max_depth == 0:
-            print("return")
             return self.evaluate_board()
         
         copy_go = self.go.copy_board()
@@ -92,6 +99,9 @@ class MyPlayer:
         return best_score
 
     def minimizing_player(self, max_depth, alpha, beta, piece_type):
+        placements = self.get_valid_placements()
+        best_score = 1000
+
         if self.go.game_end(piece_type) or max_depth == 0:
 <<<<<<< HEAD
             print("return")
@@ -131,9 +141,9 @@ class MyPlayer:
 <<<<<<< HEAD
     
     def evaluate_board(self):
-        if self.go.judge_winner() == self.my_piece_type:
+        if self.go.judge_winner() == self.piece_type:
             return 1
-        elif self.go.judge_winner() == 3 - self.my_piece_type:
+        elif self.go.judge_winner() == 3 - self.piece_type:
             return -1
         return 0
 =======
@@ -141,7 +151,7 @@ class MyPlayer:
 
 if __name__ == "__main__":
     N = 5
-    my_piece_type, previous_board, board = readInput(N)
+    piece_type, previous_board, board = readInput(N)
     go = GO(N)
 <<<<<<< HEAD
     go.set_board(my_piece_type, previous_board, board)
@@ -160,7 +170,7 @@ if __name__ == "__main__":
         mid_empty = True
 
     best_action = "PASS"
-    if (pieces == 0 and my_piece_type == 1) or (pieces == 1 and my_piece_type == 2 and mid_empty):
+    if (pieces == 0 and piece_type == 1) or (pieces == 1 and piece_type == 2 and mid_empty):
         best_action = (2, 2)
     else:
         action = player.minimax(max_depth, alpha, beta)
