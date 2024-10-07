@@ -3,7 +3,7 @@ import sys
 from read import readInput
 from write import writeOutput
 from copy import deepcopy
-from host import GO
+from my_go import GO
 
 class MyPlayer:
     def __init__(self, go, my_piece_type):
@@ -21,21 +21,59 @@ class MyPlayer:
 
         return possible_placements
     
+    def evaluate_board(self):
+        my_score = 0
+        opp_score = 0
+        my_liberty = 0
+        opp_liberty = 0
+
+        for i in range(5):
+            for j in range(5):
+                if self.go.board[i][j] == self.my_piece_type:
+                    my_score += 1
+                    my_liberty += (my_score + self.go.count_liberty(i, j))
+                elif self.go.board[i][j] == 3 - self.my_piece_type:
+                    opp_score += 1
+                    opp_liberty += (opp_score + self.go.count_liberty(i, j))
+
+        if self.my_piece_type == 1:
+            return my_liberty - opp_liberty - 2.5
+        return my_liberty - opp_liberty + 2.5
+    
+    # def evaluate_board(self):
+    #     my_score = 0
+    #     opp_score = 0
+    #     my_liberty = 0
+    #     opp_liberty = 0
+
+    #     for i in range(5):
+    #         for j in range(5):
+    #             if self.go.board[i][j] == self.my_piece_type:
+    #                 my_score += 1
+    #                 my_liberty += self.go.count_liberty(i, j)
+    #             elif self.go.board[i][j] == 3 - self.my_piece_type:
+    #                 opp_score += 1
+    #                 opp_liberty += self.go.count_liberty(i, j)
+
+    #     if self.my_piece_type == 1:
+    #         return my_score + my_liberty - opp_score - opp_liberty - 2.5
+    #     return my_score + my_liberty - opp_score - opp_liberty + 2.5
+
     def minimax(self, max_depth, alpha, beta):
         best_moves = []
-        best_score = -1000
+        best_score = -10000
         
         copy_go = self.go.copy_board()
         placements = self.get_valid_placements(self.my_piece_type)
 
-        self.go.visualize_board()
+        # self.go.visualize_board()
 
         for placement in placements:
             self.go.previous_board = deepcopy(self.go.board)
             self.go.place_chess(placement[0], placement[1], self.my_piece_type)
             self.go.died_pieces = self.go.remove_died_pieces(3 - self.my_piece_type)
 
-            self.go.visualize_board()
+            # self.go.visualize_board()
 
             score = self.minimizing_player(max_depth, alpha, beta, 3 - self.my_piece_type)
 
@@ -48,23 +86,26 @@ class MyPlayer:
 
             self.go = copy_go.copy_board()
         
+        # print(best_score)
+        # print(best_moves)
         return best_moves
 
     def maximizing_player(self, max_depth, alpha, beta, piece_type):
+        best_score = self.evaluate_board()
+
         if self.go.game_end(piece_type) or max_depth == 0:
-            print("return")
-            return self.evaluate_board()
+            # print(self.evaluate_board())        
+            return best_score
         
         copy_go = self.go.copy_board()
         placements = self.get_valid_placements(piece_type)
-        best_score = -1000
-
+        
         for placement in placements:
             self.go.previous_board = deepcopy(self.go.board)
             self.go.place_chess(placement[0], placement[1], piece_type)
             self.go.died_pieces = self.go.remove_died_pieces(3 - piece_type)
 
-            self.go.visualize_board()
+            # self.go.visualize_board()
 
             curr_score = self.minimizing_player(max_depth - 1, alpha, beta, 3 - piece_type)
             alpha = max(alpha, curr_score)
@@ -74,24 +115,25 @@ class MyPlayer:
 
             if beta <= alpha:
                 break
-        
+
         return best_score
 
     def minimizing_player(self, max_depth, alpha, beta, piece_type):
+        best_score = self.evaluate_board()
+
         if self.go.game_end(piece_type) or max_depth == 0:
-            print("return")
-            return self.evaluate_board()
+            # print(self.evaluate_board())
+            return best_score
         
         copy_go = self.go.copy_board()
         placements = self.get_valid_placements(piece_type)
-        best_score = 1000
         
         for placement in placements:
             self.go.previous_board = deepcopy(self.go.board)
             self.go.place_chess(placement[0], placement[1], piece_type)
             self.go.died_pieces = self.go.remove_died_pieces(3 - piece_type)
 
-            self.go.visualize_board()
+            # self.go.visualize_board()
 
             curr_score = self.maximizing_player(max_depth - 1, alpha, beta, 3 - piece_type)
             beta = min(beta, curr_score)
@@ -103,13 +145,6 @@ class MyPlayer:
                 break
         
         return best_score
-    
-    def evaluate_board(self):
-        if self.go.judge_winner() == self.my_piece_type:
-            return 1
-        elif self.go.judge_winner() == 3 - self.my_piece_type:
-            return -1
-        return 0
 
 if __name__ == "__main__":
     N = 5
@@ -117,9 +152,9 @@ if __name__ == "__main__":
     go = GO(N)
     go.set_board(my_piece_type, previous_board, board)
     player = MyPlayer(go, my_piece_type)
-    max_depth = 5
-    alpha = -1000
-    beta = 1000
+    max_depth = 2
+    alpha = -10000
+    beta = 10000
 
     pieces = 0
     for i in range(5):
