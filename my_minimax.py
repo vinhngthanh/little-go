@@ -152,7 +152,7 @@ if __name__ == "__main__":
     go = GO(N)
     go.set_board(my_piece_type, previous_board, board)
     player = MyPlayer(go, my_piece_type)
-    max_depth = 2
+    max_depth = 1
     alpha = -10000
     beta = 10000
 

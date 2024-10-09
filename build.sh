@@ -62,8 +62,8 @@ play()
 		eval "$1" >&2
 		let moves+=1
 
-		python3 $prefix/host.py -m $moves -v True >&2
-        # python3 $prefix/host.py -m $moves>&2
+		# python3 $prefix/host.py -m $moves -v True >&2
+        python3 $prefix/host.py -m $moves>&2
 		rst=$?
 
 		if [[ "$rst" != "0" ]]; then
@@ -78,8 +78,8 @@ play()
 		eval "$2" >&2
 		let moves+=1
 
-		python3 $prefix/host.py -m $moves -v True >&2
-        # python3 $prefix/host.py -m $moves>&2
+		# python3 $prefix/host.py -m $moves -v True >&2
+        python3 $prefix/host.py -m $moves>&2
 		rst=$?
 
 		if [[ "$rst" != "0" ]]; then
