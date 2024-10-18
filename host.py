@@ -434,7 +434,7 @@ def judge(n_move, verbose=False):
         go.visualize_board()
         print()
 
-    if go.game_end(piece_type, action):       
+    if go.game_end(piece_type, action):      
         result = go.judge_winner()
         if verbose:
             print('Game end.')
@@ -460,5 +460,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     judge(args.move, args.verbose)
-        
-        

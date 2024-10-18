@@ -354,3 +354,153 @@ class GO:
         if cnt_1 > cnt_2 + self.komi: return 1
         elif cnt_1 < cnt_2 + self.komi: return 2
         else: return 0
+
+     
+    def play(self, player1, player2, verbose=False):
+        '''
+        The game starts!
+
+        :param player1: Player instance.
+        :param player2: Player instance.
+        :param verbose: whether print input hint and error information
+        :return: piece type of winner of the game (0 if it's a tie).
+        '''
+        self.init_board(self.size)
+        # Print input hints and error message if there is a manual player
+        if player1.type == 'manual' or player2.type == 'manual':
+            self.verbose = True
+            print('----------Input "exit" to exit the program----------')
+            print('X stands for black chess, O stands for white chess.')
+            self.visualize_board()
+        
+        verbose = self.verbose
+        # Game starts!
+        while 1:
+            piece_type = 1 if self.X_move else 2
+
+            # Judge if the game should end
+            if self.game_end(piece_type):       
+                result = self.judge_winner()
+                if verbose:
+                    print('Game ended.')
+                    if result == 0: 
+                        print('The game is a tie.')
+                    else: 
+                        print('The winner is {}'.format('X' if result == 1 else 'O'))
+                return result
+
+            if verbose:
+                player = "X" if piece_type == 1 else "O"
+                print(player + " makes move...")
+
+            # Game continues
+            if piece_type == 1: action = player1.get_input(self, piece_type)
+            else: action = player2.get_input(self, piece_type)
+
+            if verbose:
+                player = "X" if piece_type == 1 else "O"
+                print(action)
+
+            if action != "PASS":
+                # If invalid input, continue the loop. Else it places a chess on the board.
+                if not self.place_chess(action[0], action[1], piece_type):
+                    if verbose:
+                        self.visualize_board() 
+                    continue
+
+                self.died_pieces = self.remove_died_pieces(3 - piece_type) # Remove the dead pieces of opponent
+            else:
+                self.previous_board = deepcopy(self.board)
+
+            if verbose:
+                self.visualize_board() # Visualize the board again
+                print()
+
+            self.n_move += 1
+            self.X_move = not self.X_move # Players take turn
+
+    def evaluate_board(self):
+        white_score = 0
+        black_score = 0
+        white_lib = 0
+        black_lib = 0
+
+        for i in range(5):
+            for j in range(5):
+                if self.board[i][j] == 1:
+                    black_score += 1
+                    black_lib += (black_score + self.count_liberty(i, j))
+                elif self.board[i][j] == 2:
+                    white_score += 1
+                    white_lib += (white_score + self.count_liberty(i, j))
+
+        return white_lib - black_lib
+    
+    def is_surrounded(self, i, j, piece_type):
+        ally_members = self.ally_dfs(i, j)
+        for member in ally_members:
+            neighbors = self.detect_neighbor(member[0], member[1])
+            for piece in neighbors:
+                if self.board[piece[0]][piece[1]] == 0:
+                    return False
+        return True
+
+def judge(n_move, verbose=False):
+
+    N = 5
+   
+    piece_type, previous_board, board = readInput(N)
+    go = GO(N)
+    go.verbose = verbose
+    go.set_board(piece_type, previous_board, board)
+    go.n_move = n_move
+    try:
+        action, x, y = readOutput()
+    except:
+        print("output.txt not found or invalid format")
+        return 3-piece_type, 0
+        sys.exit(3-piece_type)
+
+    if action == "MOVE":
+        if not go.place_chess(x, y, piece_type):
+            print('Game end.')
+            print('The winner is {}'.format('X' if 3 - piece_type == 1 else 'O'))
+            return 3-piece_type, 0
+            sys.exit(3 - piece_type)
+
+        go.died_pieces = go.remove_died_pieces(3 - piece_type)
+
+    if verbose:
+        go.visualize_board()
+        print()
+
+    if go.game_end(piece_type, action):       
+        winner = go.judge_winner()
+        rst = go.evaluate_board()
+        if verbose:
+            print('Game end.')
+            if winner == 0:
+                print('The game is a tie.')
+            else: 
+                print('The winner is {}'.format('X' if winner == 1 else 'O'))
+
+        return winner, rst
+        sys.exit(winner)
+
+    piece_type = 2 if piece_type == 1 else 1
+
+    if action == "PASS":
+        go.previous_board = go.board
+    writeNextInput(piece_type, go.previous_board, go.board)
+
+    return 0, 0
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--move", "-m", type=int, help="number of total moves", default=0)
+    parser.add_argument("--verbose", "-v", type=bool, help="print board", default=False)
+    args = parser.parse_args()
+
+    judge(args.move, args.verbose)

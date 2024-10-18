@@ -1,10 +1,11 @@
 import os
 import subprocess
 import datetime
-from my_player3 import QLearner
+import my_go
 
-PLAY_TIME = 8
+PLAY_TIME = 10000
 TA_AGENT = "random_player.py"
+# TA_AGENT = "weak_minimax.py"
 # TA_AGENT = "my_minimax.py"
 PREFIX = "./init"
 INPUT_FILE = "input.txt"
@@ -32,8 +33,12 @@ def play(black_cmd, white_cmd, white_agent = None, black_agent = None):
             subprocess.run(black_cmd, shell=True, check=True)
         moves += 1
 
-        rst = subprocess.run(f"python3 ./host.py -m {moves}", shell=True)
-        if rst.returncode != 0:
+        # rst = subprocess.run(f"python3 ./host.py -m {moves} -v True", shell=True)
+        # rst = subprocess.run(f"python3 ./host.py -m {moves}", shell=True)
+        # rst = subprocess.run(f"python3 ./my_go.py -m {moves}", shell=True)
+        rst, score = my_go.judge(moves)
+
+        if rst != 0:
             break
 
         print("White makes move...")
@@ -43,11 +48,15 @@ def play(black_cmd, white_cmd, white_agent = None, black_agent = None):
             subprocess.run(white_cmd, shell=True, check=True)
         moves += 1
 
-        rst = subprocess.run(f"python3 ./host.py -m {moves}", shell=True)
-        if rst.returncode != 0:
-            break
+        # rst = subprocess.run(f"python3 ./host.py -m {moves} -v True", shell=True)
+        # rst = subprocess.run(f"python3 ./host.py -m {moves}", shell=True)
+        # rst = subprocess.run(f"python3 ./my_go.py -m {moves}", shell=True)
+        rst, score = my_go.judge(moves)
 
-    return rst.returncode
+        if rst != 0:
+            break
+    
+    return rst, score
 
 def main():
     print("")
@@ -62,12 +71,12 @@ def main():
     ta_cmd = f"python3 {TA_AGENT}"
     
     for round in range(1, PLAY_TIME + 1, 2):
-        white_agent = QLearner(piece_type = 2, alpha = 0.7, gamma = 0.9, epsilon = 0.1, initial_value = 0.5)
+        white_agent = QLearner(piece_type = 2, alpha = 0.7, gamma = 0.9, epsilon = 0.0, initial_value = 0.5)
         
         print(f"=====Round {round}=====")
         print("Black: TA White: You")
-        winner = play(ta_cmd, "python3 my_player3.py", white_agent = white_agent)
-        white_agent.learn(winner)
+        winner, score = play(ta_cmd, "python3 my_player3.py", white_agent = white_agent)
+        white_agent.learn(winner, score)
 
         if winner == 2:
             print('White (You) win!')
@@ -78,12 +87,12 @@ def main():
         else:
             print('White (You) lose.')
 
-        black_agent = QLearner(piece_type = 1, alpha = 0.7, gamma = 0.9, epsilon = 0.1, initial_value = 0.5)
+        black_agent = QLearner(piece_type = 1, alpha = 0.7, gamma = 0.9, epsilon = 0.0, initial_value = 0.5)
 
         print(f"=====Round {round + 1}=====")
         print("Black: You White: TA")
-        winner = play("python3 my_player3.py", ta_cmd, black_agent = black_agent)
-        black_agent.learn(winner)
+        winner, score = play("python3 my_player3.py", ta_cmd, black_agent = black_agent)
+        black_agent.learn(winner, score)
 
         if winner == 1:
             print('Black (You) win!')
@@ -98,6 +107,8 @@ def main():
         print("===== Wins =====")
         print(f"You play as Black Player | Win: {black_win_time} / {round // 2 + 1}")
         print(f"You play as White Player | Win: {white_win_time} / {round // 2 + 1}")
+        print(f"Black win rate: {(black_win_time / (round // 2 + 1)):.2f}")
+        print(f"WHite win rate: {(white_win_time / (round // 2 + 1)):.2f}")
         print(f"Win rate: {((black_win_time + white_win_time) / (round + 1)):.2f}")
         print()
 

@@ -1,206 +1,213 @@
 import random
-import numpy as np
-import pickle
+import sys
 from read import readInput
 from write import writeOutput
-from host import GO
+from copy import deepcopy
+from my_go import GO
 
-WIN_REWARD = 1.0
-DRAW_REWARD = 0.5
-LOSS_REWARD = 0.0
-QFILE = "q_table.pkl"
+class MyPlayer:
+    def __init__(self, go, my_piece_type):
+        self.go = go
+        self.my_piece_type = my_piece_type
 
-class QLearner:
-    def __init__(self, piece_type, alpha, gamma, epsilon, initial_value, q_file = QFILE):
-        self.piece_type = piece_type
-        self.alpha = alpha
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.q_file = q_file
-        self.q_values = self.load_q_values(QFILE)
-        self.history_states = []
-        self.initial_value = initial_value
-
-    def get_input(self, go, piece_type):    
+    def get_valid_placements(self, piece_type):
+        N = self.go.size
         possible_placements = []
-        for i in range(go.size):
-            for j in range(go.size):
-                if go.valid_place_check(i, j, piece_type, test_check=True):
+
+        for i in range(N):
+            for j in range(N):
+                if self.go.valid_place_check(i, j, piece_type):
                     possible_placements.append((i, j))
 
-        action = "PASS"
-        if not possible_placements:
-            return action
-        
-        if random.uniform(0, 1) < self.epsilon:
-            action = self.select_best_move(go, possible_placements, True)
-        else:
-            action = self.select_best_move(go, possible_placements, False)
-        
-        return action
-
-    def select_best_move(self, go, possible_placements, mutate):
-        canonical_board, transformation = self.get_canonical_board(go.board)
-        transformed_state = self.encode_state(canonical_board)
-        q_values = self.Q(transformed_state)
-
-        best_move = None
-        if mutate:
-            move = random.choice(possible_placements)
-            best_move = self.transform_move(move, transformation)
-        else:
-            max_q_value = -np.inf
-            for move in possible_placements:
-                row, col = self.transform_move(move, transformation)
-                if q_values[row][col] > max_q_value:
-                    max_q_value = q_values[row][col]
-                    best_move = (row, col)
-
-        self.record_move(transformed_state, best_move)
-        reverted_move = self.revert_move(best_move, transformation)
-        return reverted_move
-
-    def Q(self, state):
-        if state not in self.q_values:
-            q_val = np.zeros((5, 5))
-            q_val.fill(self.initial_value)
-            self.q_values[state] = q_val
-        return self.q_values[state]
-
-    def encode_state(self, board):
-        return tuple(tuple(int(cell) for cell in row) for row in board)
-
-    def generate_transformations(self, board):
-        transformations = []
-        
-        transformations.append(board)
-        
-        for _ in range(3):
-            board = np.rot90(board)
-            transformations.append(board)
-        
-        transformations.extend([np.fliplr(b) for b in transformations])
-        transformations.extend([np.flipud(b) for b in transformations])
-        
-        return transformations
+        return possible_placements
     
-    def get_canonical_board(self, board):
-        transformations = self.generate_transformations(board)
-        transformations_tuples = [tuple(map(tuple, b)) for b in transformations]
-        
-        canonical_board_tuple = min(transformations_tuples, key=lambda x: self.encode_state(x))
-        
-        transformation_index = None
-        for idx, transformed_board in enumerate(transformations_tuples):
-            if transformed_board == canonical_board_tuple:
-                transformation_index = idx
-                break
+    def evaluate_board(self):
+        my_score = 0
+        opp_score = 0
+        my_liberty = 0
+        opp_liberty = 0
+        my_territory = 0
+        opp_territory = 0
+        my_center_control = 0
+        opp_center_control = 0
 
-        canonical_board = transformations[transformation_index]
+        center_positions = [(2, 2), (1, 2), (2, 1), (2, 3), (3, 2)]
 
-        return canonical_board, transformation_index
-        
-    def revert_move(self, move, transformation):
-        reverted_move = (int(move[0]), int(move[1]))
-
-        if transformation == 0:
-            pass
-        elif transformation == 1:
-            reverted_move = (move[1], 4 - move[0])
-        elif transformation == 2:
-            reverted_move = (4 - move[0], 4 - move[1])
-        elif transformation == 3:
-            reverted_move = (4 - move[1], move[0])
-        elif transformation == 4:
-            reverted_move = (move[0], 4 - move[1])
-        elif transformation == 5:
-            reverted_move = (4 - move[0], move[1])
-
-        return reverted_move
-    
-    def transform_move(self, move, transformation):
-        transformed_move = (int(move[0]), int(move[1]))
-
-        if transformation == 0:
-            pass
-        elif transformation == 1:
-            transformed_move = (4 - move[1], move[0])
-        elif transformation == 2:
-            transformed_move = (4 - move[0], 4 - move[1])
-        elif transformation == 3:
-            transformed_move = (move[1], 4 - move[0])
-        elif transformation == 4:
-            transformed_move = (move[0], 4 - move[1])
-        elif transformation == 5:
-            transformed_move = (4 - move[0], move[1])
-
-        return transformed_move
-
-    def learn(self, result):
-        if result == self.piece_type:
-            reward = WIN_REWARD
-        elif result == 0:
-            reward = DRAW_REWARD
-        else:
-            reward = LOSS_REWARD
-        
-        self.history_states.reverse()
-        max_q_value = -1.0
-        
-        for state, move in self.history_states:
-            q = self.Q(state)
-            if max_q_value < 0:
-                q[move[0]][move[1]] = reward
-            else:
-                q[move[0]][move[1]] = (1 - self.alpha) * q[move[0]][move[1]] + self.alpha * self.gamma * max_q_value
-            max_q_value = np.max(q)
-        
-        self.save_q_values()
-        self.history_states = []
-
-    def record_move(self, state, move):
-        self.history_states.append((state, move))
-
-    def save_q_values(self):
-        with open(self.q_file, 'wb') as f:
-            pickle.dump(self.q_values, f)
-    
-    def load_q_values(self, q_file):
-        try:
-            with open(q_file, 'rb') as f:
-                return pickle.load(f)
-        except (FileNotFoundError, EOFError):
-            return {}
-        
-    def execute(self):
-        N = 5
-        piece_type, previous_board, board = readInput(N)
-        go = GO(N)
-        go.set_board(piece_type, previous_board, board)
-
-        pieces = 0
         for i in range(5):
             for j in range(5):
-                if go.board[i][j] != 0:
-                    pieces += 1
+                if self.go.board[i][j] == self.my_piece_type:
+                    my_score += 1
+                    my_liberty += self.go.count_liberty(i, j)
+                    
+                    if (i, j) in center_positions:
+                        my_center_control += 1
 
-        action = "PASS"
-        if pieces == 0 and self.piece_type == 1:
-            action = (2, 2)
-        else:
-            action = self.get_input(go, self.piece_type)             
-        writeOutput(action)
+                elif self.go.board[i][j] == 3 - self.my_piece_type:
+                    opp_score += 1
+                    opp_liberty += self.go.count_liberty(i, j)
+                    
+                    if (i, j) in center_positions:
+                        opp_center_control += 1
+
+                elif self.go.board[i][j] == 0:
+                    adjacent_stones = [
+                        self.go.board[x][y] for x, y in self.go.detect_neighbor(i, j)
+                    ]
+                    if all(s == self.my_piece_type for s in adjacent_stones if s != 0):
+                        my_territory += 1
+                    elif all(s == 3 - self.my_piece_type for s in adjacent_stones if s != 0):
+                        opp_territory += 1
+
+        my_total_score = (my_score + my_liberty + my_territory + my_center_control)
+        opp_total_score = (opp_score + opp_liberty + opp_territory + opp_center_control)
+
+        komi = 2.5 if self.my_piece_type == 1 else -2.5
+
+        return my_total_score - opp_total_score + komi
+
+    def minimax(self, max_depth, alpha, beta):
+        best_moves = []
+        best_score = -10000
+        
+        copy_go = self.go.copy_board()
+        placements = self.get_valid_placements(self.my_piece_type)
+
+        self.go.visualize_board()
+
+        for placement in placements:
+            self.go.previous_board = deepcopy(self.go.board)
+            self.go.place_chess(placement[0], placement[1], self.my_piece_type)
+            self.go.died_pieces = self.go.remove_died_pieces(3 - self.my_piece_type)
+
+            # self.go.visualize_board()
+
+            score = self.minimizing_player(max_depth, alpha, beta, 3 - self.my_piece_type)
+
+            if score > best_score:
+                best_score = score
+                alpha = best_score
+                best_moves = [placement]
+            elif score == best_score:
+                best_moves.append(placement)
+
+            self.go = copy_go.copy_board()
+        
+        # print(best_score)
+        # print(best_moves)
+        return best_moves
+
+    def maximizing_player(self, max_depth, alpha, beta, piece_type):
+        best_score = self.evaluate_board()
+
+        if self.go.game_end(piece_type) or max_depth == 0:
+            # print(self.evaluate_board())        
+            return best_score
+        
+        copy_go = self.go.copy_board()
+        placements = self.get_valid_placements(piece_type)
+        
+        for placement in placements:
+            self.go.previous_board = deepcopy(self.go.board)
+            self.go.place_chess(placement[0], placement[1], piece_type)
+            self.go.died_pieces = self.go.remove_died_pieces(3 - piece_type)
+
+            # self.go.visualize_board()
+
+            curr_score = self.minimizing_player(max_depth - 1, alpha, beta, 3 - piece_type)
+            alpha = max(alpha, curr_score)
+            best_score = max(best_score, curr_score)
+            
+            self.go = copy_go.copy_board()
+
+            if beta <= alpha:
+                break
+
+        return best_score
+
+    def minimizing_player(self, max_depth, alpha, beta, piece_type):
+        best_score = self.evaluate_board()
+
+        if self.go.game_end(piece_type) or max_depth == 0:
+            # print(self.evaluate_board())
+            return best_score
+        
+        copy_go = self.go.copy_board()
+        placements = self.get_valid_placements(piece_type)
+        
+        for placement in placements:
+            self.go.previous_board = deepcopy(self.go.board)
+            self.go.place_chess(placement[0], placement[1], piece_type)
+            self.go.died_pieces = self.go.remove_died_pieces(3 - piece_type)
+
+            # self.go.visualize_board()
+
+            curr_score = self.maximizing_player(max_depth - 1, alpha, beta, 3 - piece_type)
+            beta = min(beta, curr_score)
+            best_score = min(best_score, curr_score)
+            
+            self.go = copy_go.copy_board()
+
+            if beta <= alpha:
+                break
+        
+        return best_score
+    
+    def choose_statistical_best(self, best_moves):
+        best_scores = []
+        
+        copy_go = self.go.copy_board()
+
+        for move in best_moves:
+            i, j = move
+            
+            self.go.previous_board = deepcopy(self.go.board)
+            self.go.place_chess(i, j, self.my_piece_type)
+            self.go.died_pieces = self.go.remove_died_pieces(3 - self.my_piece_type)
+            
+            liberty_score = self.go.count_liberty(i, j)
+            capture_potential = len(self.go.died_pieces)
+            
+            center_control = 0
+            center_positions = [(2, 2), (1, 2), (2, 1), (2, 3), (3, 2)]
+            if (i, j) in center_positions:
+                center_control = 1
+            
+            move_score = (liberty_score * 2) + (capture_potential * 3) + (center_control * 1.5)
+            best_scores.append((move_score, move))
+            
+            self.go = copy_go.copy_board()
+        
+        best_scores.sort(reverse=True, key=lambda x: x[0])
+        
+        return best_scores[0][1]
+
 
 if __name__ == "__main__":
     N = 5
-    alpha = 0.7
-    gamma = 0.9
-    epsilon = 0
-    # epsilon = 0.1
-    initial_value = 0.5
-    piece_type, previous_board, board = readInput(N)
+    my_piece_type, previous_board, board = readInput(N)
     go = GO(N)
-    go.set_board(piece_type, previous_board, board)
-    player = QLearner(piece_type, alpha, gamma, epsilon, initial_value)
-    action = player.get_input(go, piece_type)
-    writeOutput(action)
+    go.set_board(my_piece_type, previous_board, board)
+    player = MyPlayer(go, my_piece_type)
+    max_depth = 2
+    alpha = -10000
+    beta = 10000
+
+    pieces = 0
+    for i in range(5):
+        for j in range(5):
+            if board[i][j] != 0:
+                pieces += 1
+    mid_empty = False
+    if board[2][2] == 0:
+        mid_empty = True
+
+    best_action = "PASS"
+    if (pieces == 0 and my_piece_type == 1) or (pieces == 1 and my_piece_type == 2 and mid_empty):
+        best_action = (2, 2)
+    else:
+        action = player.minimax(max_depth, alpha, beta)
+        if(action):
+            best_action = player.choose_statistical_best(action)
+
+    # print(best_action)
+    writeOutput(best_action)
