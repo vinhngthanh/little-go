@@ -3,7 +3,7 @@ import subprocess
 import datetime
 import my_go
 
-PLAY_TIME = 10
+PLAY_TIME = 100
 # TA_AGENT = "random_player.py"
 TA_AGENT = "weak_minimax.py"
 # TA_AGENT = "my_player3.py"

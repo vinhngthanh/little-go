@@ -28,47 +28,63 @@ class MyPlayer:
         opp_liberty = 0
         my_territory = 0
         opp_territory = 0
-        my_capture_potential = 0
-        opp_capture_potential = 0
+        my_center_control = 0
+        opp_center_control = 0
+        my_eye_potential = 0
+        opp_eye_potential = 0
 
+        # Define center positions
+        center_positions = [(2, 2), (1, 2), (2, 1), (2, 3), (3, 2)]
+
+        # Iterate over the board
         for i in range(5):
             for j in range(5):
-                if self.go.board[i][j] == self.my_piece_type:
+                current_piece = self.go.board[i][j]
+
+                if current_piece == self.my_piece_type:
                     my_score += 1
                     my_liberty += self.go.count_liberty(i, j)
-                    
-                    if self.go.is_surrounded(i, j, 3 - self.my_piece_type):
-                        my_capture_potential += 1
+                    if self.go.is_eye(i, j, self.my_piece_type):
+                        my_eye_potential += 1
+                    if (i, j) in center_positions:
+                        my_center_control += 1
 
-                elif self.go.board[i][j] == 3 - self.my_piece_type:
+                elif current_piece == 3 - self.my_piece_type:
                     opp_score += 1
                     opp_liberty += self.go.count_liberty(i, j)
+                    if self.go.is_eye(i, j, 3 - self.my_piece_type):
+                        opp_eye_potential += 1
+                    if (i, j) in center_positions:
+                        opp_center_control += 1
 
-                    if self.go.is_surrounded(i, j, self.my_piece_type):
-                        opp_capture_potential += 1
-
-        for i in range(5):
-            for j in range(5):
-                if self.go.board[i][j] == 0:
-                    adjacent_stones = self.go.detect_neighbor(i, j)
+                # Detect empty territories and evaluate them
+                elif current_piece == 0:
+                    adjacent_stones = [self.go.board[x][y] for x, y in self.go.detect_neighbor(i, j)]
+                    # Territory control evaluation
                     if all(s == self.my_piece_type for s in adjacent_stones if s != 0):
                         my_territory += 1
                     elif all(s == 3 - self.my_piece_type for s in adjacent_stones if s != 0):
                         opp_territory += 1
+                    
+                    # Additional evaluation for empty spots (potential territory)
+                    if any(s == self.my_piece_type for s in adjacent_stones) and not any(s == 3 - self.my_piece_type for s in adjacent_stones):
+                        my_territory += 0.5  # Potential territory for me
+                    if any(s == 3 - self.my_piece_type for s in adjacent_stones) and not any(s == self.my_piece_type for s in adjacent_stones):
+                        opp_territory += 0.5  # Potential territory for opponent
 
+        # Calculate total scores with added weights
         my_total_score = (
-            my_score + my_liberty + my_territory +
-            (my_capture_potential * 5)
+            my_score + my_liberty + my_territory + my_center_control + (my_eye_potential * 3)
         )
         opp_total_score = (
-            opp_score + opp_liberty + opp_territory +
-            (opp_capture_potential * 5)
+            opp_score + opp_liberty + opp_territory + opp_center_control + (opp_eye_potential * 3)
         )
 
+        # Komi (compensation points for the second player)
         komi = 2.5 if self.my_piece_type == 1 else -2.5
 
-        return my_total_score - opp_total_score + komi
-
+        # return my_total_score - opp_total_score + komi
+        return my_total_score - opp_total_score
 
     def minimax(self, max_depth, alpha, beta):
         best_moves = []
@@ -172,24 +188,19 @@ class MyPlayer:
             liberty_score = self.go.count_liberty(i, j)
             capture_potential = len(self.go.died_pieces)
             
-            potential_territory = 0
-            adjacent_stones = self.go.detect_neighbor(i, j)
-            if all(s == self.my_piece_type for s in adjacent_stones if s != 0):
-                potential_territory += 1
-            
-            position_score = 0
+            center_control = 0
             center_positions = [(2, 2), (1, 2), (2, 1), (2, 3), (3, 2)]
             if (i, j) in center_positions:
-                position_score += 1
+                center_control = 1
             
-            move_score = (liberty_score * 2) + (capture_potential * 3) + (potential_territory * 4) + (position_score * 1.5)
+            move_score = (liberty_score * 2) + (capture_potential * 3) + (center_control * 1.5)
             best_scores.append((move_score, move))
             
             self.go = copy_go.copy_board()
         
         best_scores.sort(reverse=True, key=lambda x: x[0])
         
-        return best_scores[0][1] if best_scores else None
+        return best_scores[0][1]
 
 
 if __name__ == "__main__":

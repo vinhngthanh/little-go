@@ -2,7 +2,7 @@ import os
 import subprocess
 import datetime
 import my_go
-
+from my_qlearner import QLearner
 PLAY_TIME = 10000
 TA_AGENT = "random_player.py"
 # TA_AGENT = "weak_minimax.py"

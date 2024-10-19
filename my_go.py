@@ -445,6 +445,56 @@ class GO:
                     return False
         return True
 
+    def is_eye(self, i, j, piece_type):
+        """
+        Check if the position (i, j) is an eye for the given piece type.
+        An eye is an empty spot surrounded by friendly stones that is potentially safe for creating two eyes.
+        
+        Args:
+        i (int): Row index.
+        j (int): Column index.
+        piece_type (int): The type of piece (1 or 2) for the current player.
+        
+        Returns:
+        bool: True if the position is an eye for the player, False otherwise.
+        """
+        # Check if the position is empty
+        if self.board[i][j] != 0:
+            return False
+
+        # Get the neighbors of the position (i, j)
+        neighbors = self.detect_neighbor(i, j)
+
+        # Check if all neighbors are friendly stones
+        friendly_count = 0
+        for neighbor in neighbors:
+            x, y = neighbor
+            if self.board[x][y] == piece_type:
+                friendly_count += 1
+            elif self.board[x][y] == 0:
+                continue
+            else:
+                return False  # Found an opponent's stone
+
+        # An eye needs all surrounding stones to be friendly
+        if friendly_count != len(neighbors):
+            return False
+
+        # Now check the liberties of the group surrounding this eye
+        # For a stable eye, there should be at least two liberties
+        liberties = 0
+        for neighbor in neighbors:
+            x, y = neighbor
+            for liberty in self.detect_neighbor(x, y):
+                if self.board[liberty[0]][liberty[1]] == 0:  # Count empty spots as liberties
+                    liberties += 1
+                    # If we found two liberties, we can stop counting
+                    if liberties >= 2:
+                        return True
+
+        # If not enough liberties are found, it's not a secure eye
+        return False
+
 def judge(n_move, verbose=False):
 
     N = 5
